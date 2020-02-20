@@ -5,6 +5,9 @@ using System.Text;
 using System.Threading.Tasks;
 using CI.DAL;
 using CI.DAL.Entities;
+using CI.SER;
+using CI.SER.DTOs;
+using CI.SER.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -43,6 +46,7 @@ namespace CI.API
             builder.AddEntityFrameworkStores<ApplicationDbContext>();
             builder.AddSignInManager<SignInManager<User>>();
             builder.AddRoleManager<RoleManager<IdentityRole>>();
+            builder.AddDefaultTokenProviders();
 
             services.AddAuthorization(options=>
                 options.AddPolicy("EmployerPolicy", 
@@ -65,6 +69,10 @@ namespace CI.API
                 options.UseSqlite(Configuration.GetConnectionString("Default")));
 
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
+
+            services.AddSingleton<IEmail, MailJet>();
+
+            services.Configure<EmailOptionsDTO>(Configuration.GetSection("Mailjet"));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

@@ -2,12 +2,16 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Web;
 using CI.API.ViewModels;
 using CI.DAL;
 using CI.DAL.Entities;
+using CI.SER.DTOs;
+using CI.SER.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace CI.API.Controllers
 {
@@ -17,11 +21,18 @@ namespace CI.API.Controllers
     {
         private readonly UserManager<User> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
+        private readonly IOptions<EmailOptionsDTO> _emailOptions;
+        private readonly IEmail _email;
 
-        public EmployersController(UserManager<User> userManager, RoleManager<IdentityRole> roleManager)
+        public EmployersController(UserManager<User> userManager, 
+                                RoleManager<IdentityRole> roleManager,
+                                IOptions<EmailOptionsDTO> emailOptions,
+                                IEmail email)
         {
             _userManager = userManager;
             _roleManager = roleManager;
+            _emailOptions = emailOptions;
+            _email = email;
         }
         
         [HttpPost("create")]
@@ -43,6 +54,20 @@ namespace CI.API.Controllers
             {
                 return BadRequest(result);
             }
+
+            //Send Email
+            var token = await _userManager.GenerateEmailConfirmationTokenAsync(employer);
+            var confirmEmailUrl = Request.Headers["confirmEmailUrl"];
+
+            var uriBuilder = new UriBuilder(confirmEmailUrl);
+            var query = HttpUtility.ParseQueryString(uriBuilder.Query);
+            query["token"] = token;
+            query["userid"] = employer.Id;
+            uriBuilder.Query = query.ToString();
+            var urlString = uriBuilder.ToString();
+
+            var emailBody = $"Please confirm your email by clicking on the link below </br>{urlString}";
+            await _email.Send(model.Email, emailBody, _emailOptions.Value);
 
             var userFromDb = await _userManager.FindByNameAsync(employer.UserName);
             await _userManager.AddToRoleAsync(userFromDb, "Employer");  

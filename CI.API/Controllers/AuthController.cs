@@ -84,5 +84,19 @@ namespace CI.API.Controllers
 
             return tokenHandler.WriteToken(token);
         }
+
+        [HttpPost("confirmemail")]
+        public async Task<ActionResult> ConfirmEmail(ConfirmEmailViewModel model)
+        {
+            var employer = await _userManager.FindByIdAsync(model.UserId);
+            var confirm = await _userManager.ConfirmEmailAsync(employer, Uri.UnescapeDataString(model.Token));
+
+            if(confirm.Succeeded)
+            {
+                return Ok();
+            }
+
+            return Unauthorized();
+        }
     }
 }
