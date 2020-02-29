@@ -1,9 +1,10 @@
 <ng-progress id="progressBar"
-             [color]="progressBar.currentColor"></ng-progress>
+             [color]="progressBar.currentColor"
+             [thick]="true"></ng-progress>
 <ngx-alerts></ngx-alerts>
-<nav class="navbar navbar-expand-lg navbar-light bg-light">
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
     <a class="navbar-brand"
-       href="#"><i class="fas fa-user-clock"></i> CLOCK IT HUB</a>
+       [routerLink]="['']"><i class="fas fa-user-clock"></i> CLOCK IT HUB</a>
     <button class="navbar-toggler"
             type="button"
             data-toggle="collapse"
@@ -16,21 +17,24 @@
     <div class="collapse navbar-collapse"
          id="navbarNav">
         <ul class="navbar-nav ml-auto headerNav">
-            <li class="nav-item">
+            <li class="nav-item"
+                *ngIf="!authService.loggedIn();">
                 <a class="nav-link"
                    [routerLink]="['register']"
                    routerLinkActive="active">Register</a>
             </li>
-            <li class="nav-item">
+            <li class="nav-item"
+                *ngIf="!authService.loggedIn();">
                 <a class="nav-link"
                    [routerLink]="['login']"
                    routerLinkActive="active">Login</a>
             </li>
             <li class="nav-item dropdown"
+                *ngIf="authService.loggedIn();"
                 dropdown>
                 <a class="nav-link"
                    dropdownToggle>
-                    Profile
+                    Welcome {{authService.decodedToken?.unique_name}}
                 </a>
                 <div class="dropdown-menu dropdown-menu-right"
                      *dropdownMenu>
@@ -38,7 +42,7 @@
                        [routerLink]="['reset-password']"
                        routerLinkActive="active"><i class="fas fa-key"></i> Reset Password</a>
                     <a class="dropdown-item"
-                       href="#"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                       (click)="logout();"><i class="fas fa-sign-out-alt"></i> Logout</a>
                 </div>
             </li>
 
