@@ -24,57 +24,57 @@ namespace CI.API.Controllers
     [ApiController]
     public class AuthController : ControllerBase
     {
+
         private readonly UserManager<User> _userManager;
         private readonly SignInManager<User> _signInManager;
         private readonly IConfiguration _config;
         private readonly IOptions<EmailOptionsDTO> _emailOptions;
         private readonly IEmail _email;
 
-        public AuthController(UserManager<User> userManager, 
-                              SignInManager<User> signInManager, 
-                              IConfiguration config,
-                              IOptions<EmailOptionsDTO> emailOptions,
-                              IEmail email)
+        public AuthController(UserManager<User> userManager, SignInManager<User> signInManager, IConfiguration config,
+        IOptions<EmailOptionsDTO> emailOptions, IEmail email)
         {
-            _userManager = userManager;
             _signInManager = signInManager;
             _config = config;
             _emailOptions = emailOptions;
             _email = email;
+            _userManager = userManager;
+
         }
-        
+
+        // Post api/auth/login
         [HttpPost("login")]
-        public async Task<ActionResult> Login(LoginViewModel model)
+        public async Task<IActionResult> Login(LoginViewModel model)
         {
             var user = await _userManager.FindByNameAsync(model.Username);
-
-            if(user==null)
+            if (user == null)
             {
                 return BadRequest();
             }
+            var result = await _signInManager.CheckPasswordSignInAsync(user, model.Password, false);
 
-            var result=await _signInManager.CheckPasswordSignInAsync(user, model.Password, false);
-
-            if(!result.Succeeded)
+            if (!result.Succeeded)
             {
                 return BadRequest(result);
             }
-            return Ok(new { 
+            return Ok(new
+            {
                 result = result,
-                token = JwtTokenGeneratorMachine(user).Result
+                token = JwtTokenGeneratorMachine(user).Result,
+                user
             });
         }
 
+        // Post api/auth/resetpassword
         [HttpPost("resetpassword")]
-        public async Task<ActionResult> ResetPassword(ResetPasswordViewModel model)
+        public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)
         {
             var user = await _userManager.FindByEmailAsync(model.Email);
-
-            if(user!=null || user.EmailConfirmed)
+            if (user != null || user.EmailConfirmed)
             {
                 //Send Email
                 var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-                var changePasswordUrl = Request.Headers["changePasswordUrl"];
+                var changePasswordUrl = Request.Headers["changePasswordUrl"];//http://localhost:4200/change-password
 
                 var uriBuilder = new UriBuilder(changePasswordUrl);
                 var query = HttpUtility.ParseQueryString(uriBuilder.Query);
@@ -92,13 +92,29 @@ namespace CI.API.Controllers
             return Unauthorized();
         }
 
+        // Post api/auth/changepassword
         [HttpPost("changepassword")]
-        public async Task<ActionResult> ChangePassword(ChangePasswordViewModel model)
+        public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model)
         {
             var user = await _userManager.FindByIdAsync(model.UserId);
             var resetPasswordResult = await _userManager.ResetPasswordAsync(user, Uri.UnescapeDataString(model.Token), model.Password);
 
-            if(resetPasswordResult.Succeeded)
+            if (resetPasswordResult.Succeeded)
+            {
+                return Ok();
+            }
+
+            return Unauthorized();
+        }
+
+        // Post api/auth/confirmemail
+        [HttpPost("confirmemail")]
+        public async Task<IActionResult> ConfirmEmail(ConfirmEmailViewModel model)
+        {
+            var employer = await _userManager.FindByIdAsync(model.UserId);
+            var confirm = await _userManager.ConfirmEmailAsync(employer, Uri.UnescapeDataString(model.Token));
+
+            if (confirm.Succeeded)
             {
                 return Ok();
             }
@@ -116,13 +132,14 @@ namespace CI.API.Controllers
 
             var roles = await _userManager.GetRolesAsync(userInfo);
 
-            foreach(var role in roles)
+
+            foreach (var role in roles)
             {
                 claims.Add(new Claim(ClaimTypes.Role, role));
             }
 
-            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
-                _config.GetSection("AppSettings:Key").Value));
+            var securityKey = new SymmetricSecurityKey(Encoding.UTF8
+             .GetBytes(_config.GetSection("AppSettings:Key").Value));
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha512Signature);
 
             var tokenDescriptor = new SecurityTokenDescriptor
@@ -138,18 +155,6 @@ namespace CI.API.Controllers
             return tokenHandler.WriteToken(token);
         }
 
-        [HttpPost("confirmemail")]
-        public async Task<ActionResult> ConfirmEmail(ConfirmEmailViewModel model)
-        {
-            var employer = await _userManager.FindByIdAsync(model.UserId);
-            var confirm = await _userManager.ConfirmEmailAsync(employer, Uri.UnescapeDataString(model.Token));
 
-            if(confirm.Succeeded)
-            {
-                return Ok();
-            }
-
-            return Unauthorized();
-        }
     }
 }
