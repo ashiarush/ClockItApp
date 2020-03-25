@@ -2,6 +2,7 @@ import { Injectable } from "@angular/core";
 import { HttpClient, HttpHeaders } from "@angular/common/http";
 import { AuthService } from "./auth.service";
 import { map } from "rxjs/operators";
+import { User } from "../models/user";
 
 const httpOptions = {
   headers: new HttpHeaders({
@@ -13,6 +14,7 @@ const httpOptions = {
 })
 export class EmployerService {
   employersUrl = "http://localhost:5000/api/employers/";
+  currentUser: User;
 
   constructor(private http: HttpClient, private authService: AuthService) {}
 
