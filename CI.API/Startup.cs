@@ -35,12 +35,13 @@ namespace CI.API
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            IdentityBuilder builder=services.AddIdentityCore<User>(opt=>{
-                opt.Password.RequireDigit=false;
-                opt.Password.RequireLowercase=false;
-                opt.Password.RequireNonAlphanumeric=false;
-                opt.Password.RequireUppercase=false;
-                opt.Password.RequiredLength=4;
+            IdentityBuilder builder = services.AddIdentityCore<User>(opt =>
+            {
+                opt.Password.RequireDigit = false;
+                opt.Password.RequireLowercase = false;
+                opt.Password.RequireNonAlphanumeric = false;
+                opt.Password.RequireUppercase = false;
+                opt.Password.RequiredLength = 4;
 
                 opt.User.RequireUniqueEmail = true;
             });
@@ -50,31 +51,32 @@ namespace CI.API
             builder.AddRoleManager<RoleManager<IdentityRole>>();
             builder.AddDefaultTokenProviders();
 
-            services.AddAuthorization(options=>
-                options.AddPolicy("EmployerPolicy", 
+            services.AddAuthorization(options =>
+                options.AddPolicy("EmployerPolicy",
                 policy => policy.RequireRole("Employer")));
 
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            .AddJwtBearer(options=>
-            {
-                options.TokenValidationParameters = new TokenValidationParameters
-                {
-                    ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(
-                        Encoding.ASCII.GetBytes(Configuration.GetSection("AppSettings:Key").Value)),
-                    ValidateIssuer = false,
-                    ValidateAudience = false    
-                };
-            });
+               .AddJwtBearer(options =>
+               {
+                   options.TokenValidationParameters = new TokenValidationParameters
+                   {
+                       ValidateIssuerSigningKey = true,
+                       IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII
+                             .GetBytes(Configuration.GetSection("AppSettings:Key").Value)),
+                       ValidateIssuer = false,
+                       ValidateAudience = false
+                   };
+
+               });
+
 
             services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlite(Configuration.GetConnectionString("Default")));
 
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
-
             services.AddSingleton<IEmail, MailJet>();
-
-            services.Configure<EmailOptionsDTO>(Configuration.GetSection("Mailjet"));
+            services.AddSingleton<ICloudStorage, AzureStorage>();
+            services.Configure<EmailOptionsDTO>(Configuration.GetSection("MailJet"));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -89,14 +91,15 @@ namespace CI.API
                 // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
                 app.UseHsts();
             }
-
-            app.UseCors(builder=>
+            app.UseCors(builder =>
             {
                 builder.WithOrigins("http://localhost:4200");
                 builder.AllowAnyMethod();
                 builder.AllowAnyHeader();
             });
+
             app.UseAuthentication();
+
             app.UseHttpsRedirection();
             app.UseMvc();
         }
